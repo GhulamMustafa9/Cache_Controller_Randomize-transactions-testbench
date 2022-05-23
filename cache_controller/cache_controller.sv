@@ -1,19 +1,3 @@
-//////////////////////////////////////////////////////////////////////////////////
-// Create Date: 20.05.2022
-// Project Name: Cache Controller
-// Tool Versions: Questa Sim -64 10.7c     
-// Revision 1.5.9 -
-//////////////////////////////////////////////////////////////////////////////////
-/*
-Controller Specifications:
-	> Direct Mapped Cache
-	> Write-back scheme
-	> Block size = 4 words, Offset is 4 bits (block-offset=2 bits, byte-offset=2 bits)
-	> Cache size = 1024 blocks / Lines (Cache index is 10 bits)
-	> Block size is 4 words (16 bytes or 128 bits)
-	> 32-byte addresses [ tag=18 bits, Index=10 bits, Block offset=4 bits]
-	> The cache includes a valid bit and dirty bit per block	
-*/
 `timescale 1ns/1ns
 module cache_controller (
 	clk,
@@ -64,10 +48,10 @@ output cache_ready;
 //Cache consists of tag memory and data memory
 //Tag memory = valid bit + dirty bit + tag
 reg [23:0] tag_mem [0:1023];
-//reg [23:0] tag_mem [1023:0];
+
 //Data memory holds the actual data in cache
 reg [127:0] data_mem [0:1023];
-//reg [127:0] data_mem [1023:0];
+
 
 reg [1:0] present_state, next_state;
 reg [31:0] cpu_req_dataout, next_cpu_req_dataout;
@@ -109,22 +93,19 @@ assign hit = tag_mem_entry[19] && (cpu_addr_tag == tag_mem_entry[17:0]);
 
 int fd_w;
 initial begin
-
 $readmemh("initial_tag_memory.mem", tag_mem);	//load initial values for tag memory
 
-#9999
+#999
 fd_w = $fopen ("Result-Cache_memory.mem", "w"); 	// Open a new file in write mode and store file descriptor in fd_w
 for (int i = 0; i < $size(tag_mem); i++)
-	$fwrite (fd_w,"%0d	%0h	%20b - %5h	%32h\n",i,i, tag_mem[i] ,tag_mem[i] , data_mem[i]);
+	$fwrite (fd_w,"%4d(%3h)	%20b %32h\n",i,i, tag_mem[i]  , data_mem[i]);
 #10 $fclose(fd_w);
-
 
 end
 
 initial begin
 $readmemh("initial_data_memory.mem", data_mem);	//load initial values for data memory
 end
-
 
 
 always @ (posedge clk or negedge rst_n)
@@ -159,7 +140,6 @@ begin
 	cpu_req_datain_reg  	<= next_cpu_req_datain_reg;
 	cpu_req_rw_reg  	<= next_cpu_req_rw_reg;
 
-
   end
  end
  
@@ -180,7 +160,6 @@ next_mem_req_dataout = mem_req_dataout;
 next_cpu_req_addr_reg  = cpu_req_addr_reg;
 next_cpu_req_datain_reg  = cpu_req_datain_reg;
 next_cpu_req_rw_reg  = cpu_req_rw_reg;
-
 case (cpu_addr_blk_offset)
 	2'b00: cache_read_data   = data_mem_entry[31:0];
 	2'b01: cache_read_data   = data_mem_entry[63:32];
@@ -198,16 +177,12 @@ case(present_state)
     next_cpu_req_datain_reg  = cpu_req_datain;
     next_cpu_req_rw_reg  = cpu_req_rw;
     next_cache_ready = 1'b0;  
-    next_state = COMPARE_TAG;	
-    
-	state_mode = 0;
-	
-    
+    next_state = COMPARE_TAG;	   
+	state_mode = 0; 
     end
     else
     next_state = present_state;
   end
-  
   COMPARE_TAG:
   begin
     if (hit & !cpu_req_rw_reg) //read hit
@@ -247,7 +222,6 @@ if (state_mode == 0) state_mode =3;
     write_datamem_cpu = 1'b1;
     next_state = IDLE;
 if (state_mode == 0) state_mode =4;
-
 
   end
   end
